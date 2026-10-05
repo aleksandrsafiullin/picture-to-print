@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+.claude/
+
+# CLI sample meshes from svg2solid.py / svg2transfer.py
+out/
+patch/

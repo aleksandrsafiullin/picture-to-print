@@ -1,0 +1,10 @@
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+python-multipart==0.0.32
+svgelements==1.9.6
+shapely==2.1.2
+trimesh==5.1.0
+mapbox-earcut==2.1.0
+opencv-python-headless==5.0.0.93
+numpy==2.5.3
+potracer==0.0.4

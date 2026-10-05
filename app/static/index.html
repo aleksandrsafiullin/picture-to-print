@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="title">lineart2print — line art to a printable model</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M3 11.2c1.4-3.6 2.8-3.6 4.6-1.2s2.6 2.6 4.8-3.4' fill='none' stroke='%231d1d1f' stroke-width='1.5' stroke-linecap='round'/></svg>">
+<link rel="stylesheet" href="style.css?v=12">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>lineart2print</h1>
+  </div>
+  <nav class="seg" id="tabs">
+    <button data-t="vector" data-i18n="tab.vector">Vectorize</button>
+    <button data-t="model" class="on" data-i18n="tab.model">Model</button>
+  </nav>
+  <select id="lang" aria-label="Language">
+    <option value="ar">العربية</option>
+    <option value="zh">中文</option>
+    <option value="en">English</option>
+    <option value="fr">Français</option>
+    <option value="ru">Русский</option>
+    <option value="es">Español</option>
+  </select>
+</header>
+<p id="qstatus" hidden aria-live="polite"></p>
+
+<main>
+  <!-- ------------------------------------------------ controls -->
+  <aside id="panel">
+    <section class="card" id="drop">
+      <input type="file" id="file" accept=".svg,.png,.jpg,.jpeg,.webp,.bmp" hidden>
+      <div id="dropInner">
+        <svg class="glyph" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+          <rect x="5.5" y="7.5" width="21" height="17" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M5.5 20.5l6.2-5.2 4.2 3.6 3.2-2.4 7.4 5.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <strong data-i18n="drop.title">Drop a file here</strong>
+        <span data-i18n="drop.sub">SVG, PNG, JPG — line art</span>
+        <button class="ghost" id="pick" data-i18n="drop.pick">Choose file</button>
+        <span class="samples"><span data-i18n="samples">samples:</span>
+          <a href="#" id="sample" class="link">SVG</a>
+          <a href="#" id="samplePng" class="link">PNG</a></span>
+      </div>
+      <div id="fileInfo" hidden>
+        <div class="row"><span class="name" id="fileName"></span>
+          <button class="ghost sm" id="reset" data-i18n="reset">replace</button></div>
+        <div class="muted" id="fileMeta"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="toolrow histrow">
+        <button type="button" id="undo" class="ghost" disabled>
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+            <path d="M6.2 3.8 3 7l3.2 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3.4 7H9.6a3.2 3.2 0 0 1 0 6.4H8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span data-i18n="edit.undo">Undo</span>
+        </button>
+        <button type="button" id="redo" class="ghost" disabled>
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+            <path d="M9.8 3.8 13 7l-3.2 3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12.6 7H6.4a3.2 3.2 0 0 0 0 6.4H8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span data-i18n="edit.redo">Redo</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------- vectorize tab -->
+    <section class="card" data-tab="vector" hidden>
+      <h2 data-i18n="v.trace">Trace</h2>
+      <div class="seg" id="vmode">
+        <button type="button" data-v="mono" class="on" data-i18n="v.mode.mono">Black &amp; white</button>
+        <button type="button" data-v="color" data-i18n="v.mode.color">Color</button>
+      </div>
+      <div data-vmode="mono">
+        <label class="ctl"><span data-i18n="v.threshold">Black threshold</span> <output id="v_thresholdO">128</output>
+          <input type="range" id="v_threshold" min="10" max="245" step="1" value="128"></label>
+        <label class="chk"><input type="checkbox" id="v_invert">
+          <span data-i18n="v.invert">Invert (trace the light areas)</span></label>
+      </div>
+      <div data-vmode="color" hidden>
+        <label class="ctl"><span data-i18n="v.colors">Colors</span> <output id="v_colorsO">6</output>
+          <input type="range" id="v_colors" min="2" max="8" step="1" value="6"></label>
+        <p class="hint" data-i18n="v.colors_hint">Fewer colors make cleaner shapes. More colors stay closer to the picture.</p>
+        <div id="palette" class="palette"></div>
+        <label class="chip-pick"><span data-i18n="v.swatch">Selected</span>
+          <input type="color" id="v_swatch_color" value="#000000">
+          <span id="v_swatch_meta"></span></label>
+        <label class="chk"><input type="checkbox" id="v_swatch_hide">
+          <span data-i18n="v.hide">Leave this color transparent</span></label>
+        <div class="toolrow">
+          <button type="button" id="v_eyedrop" class="ghost" data-i18n="v.eyedrop">Eyedropper</button>
+          <button type="button" id="v_palette_auto" class="ghost" data-i18n="v.auto">From picture</button>
+        </div>
+        <p class="hint" id="v_pick_hint" data-i18n="v.palette_hint">Select a swatch and set its color, or sample it from the picture. Hide a swatch to leave that color transparent.</p>
+        <label class="ctl"><span data-i18n="v.overlap">Overlap</span> <output id="v_overlapO">1</output> px
+          <input type="range" id="v_overlap" min="0" max="3" step="1" value="1"></label>
+        <p class="hint" data-i18n="v.overlap_hint">A little overlap closes hairline gaps between neighboring colors.</p>
+      </div>
+      <label class="ctl"><span data-i18n="v.blur">Blur before threshold</span> <output id="v_blurO">0.00</output> px
+        <input type="range" id="v_blur" min="0" max="5" step="0.5" value="0"></label>
+      <p class="hint" data-i18n="v.blur_hint">Blur rescues noisy JPEGs and compression artifacts.</p>
+    </section>
+
+    <section class="card" data-tab="vector" hidden>
+      <h2 data-i18n="v.contour">Contour</h2>
+      <label class="ctl"><span data-i18n="v.smooth">Smoothing</span> <output id="v_smoothO">1.00</output>
+        <input type="range" id="v_smooth" min="0" max="1.33" step="0.01" value="1"></label>
+      <p class="hint" data-i18n="v.smooth_hint">0 — hard corners as they are, 1.33 — the softest curves.</p>
+      <label class="ctl"><span data-i18n="v.tolerance">Simplify curves</span> <output id="v_toleranceO">0.20</output>
+        <input type="range" id="v_tolerance" min="0" max="1.5" step="0.05" value="0.2"></label>
+      <label class="ctl"><span data-i18n="v.despeckle">Drop specks smaller than</span> <output id="v_despeckleO">4</output> px
+        <input type="range" id="v_despeckle" min="0" max="80" step="1" value="4"></label>
+      <label class="ctl"><span data-i18n="v.upscale">Enlarge before tracing</span> <output id="v_upscaleO">1.00</output>×
+        <input type="range" id="v_upscale" min="1" max="3" step="0.25" value="1"></label>
+      <p class="hint" data-i18n="v.upscale_hint">Enlarging pulls small details out of a low-resolution image, but it takes longer.</p>
+    </section>
+
+    <section class="card" data-tab="vector" hidden>
+      <h2 data-i18n="v.islands">Islands</h2>
+      <button type="button" id="v_islands" class="ghost wide" data-i18n="v.island_mode">Mark islands</button>
+      <button type="button" id="v_keep" class="ghost wide" data-i18n="v.keep" disabled>Keep marked</button>
+      <button type="button" id="v_drop_islands" class="ghost wide" data-i18n="v.drop_islands" disabled>Delete marked</button>
+      <p class="hint" id="v_island_hint" data-i18n="v.island_hint">Click a shape. Keep drops the other shapes of that same color. Delete drops only the marked ones.</p>
+    </section>
+
+    <section class="card" data-tab="vector" hidden>
+      <h2 data-i18n="v.next">Next</h2>
+      <button id="v_use" class="primary" data-i18n="v.use" disabled>Send to model</button>
+      <button id="v_download" class="ghost wide" data-i18n="v.download" disabled>Download SVG</button>
+      <button type="button" id="v_reset" class="ghost wide" data-i18n="v.reset">Reset to defaults</button>
+      <p class="hint" id="v_hint"></p>
+      <p class="hint" data-vmode="color" data-i18n="v.use_color" hidden>The model gets one black silhouette of every visible color.</p>
+    </section>
+
+    <!-- ------------------------------------------- model tab -->
+    <section class="card" id="bitmapBox" data-tab="model" hidden>
+      <h2 data-i18n="bmp.title">Raster image</h2>
+      <label class="ctl"><span data-i18n="bmp.threshold">Black threshold</span> <output id="thresholdO">128</output>
+        <input type="range" id="threshold" min="10" max="245" step="1" value="128"></label>
+      <label class="chk"><input type="checkbox" id="invert">
+        <span data-i18n="bmp.invert">Invert (print the light areas)</span></label>
+      <p class="hint" data-i18n="bmp.hint">Tracing here is coarse, pixel by pixel. For a clean contour, use the Vectorize tab.</p>
+    </section>
+
+    <section class="card" data-tab="model">
+      <h2 data-i18n="mode.title">What to print</h2>
+      <div class="seg" id="mode">
+        <button data-v="patch" class="on" data-i18n="mode.patch">Shirt patch</button>
+        <button data-v="plaque" data-i18n="mode.plaque">Keychain / plaque</button>
+      </div>
+      <p class="hint" id="modeHint"></p>
+    </section>
+
+    <section class="card" data-tab="model">
+      <h2 data-i18n="size.title">Size and shape</h2>
+      <label class="ctl">
+        <span class="lbl"><span data-i18n="fit.label">Extent</span>
+          <select id="fit"><option value="width" data-i18n="fit.width">by width</option>
+            <option value="height" data-i18n="fit.height">by height</option></select>
+        </span>
+        <span class="num"><input type="number" id="size_mm" min="10" max="300" step="1" value="150"> <span data-i18n="unit.mm">mm</span></span>
+      </label>
+      <label class="ctl"><span data-i18n="grow">Thicken strokes</span> <output id="grow_mmO">0.00</output> <span data-i18n="unit.mm">mm</span>
+        <input type="range" id="grow_mm" min="0" max="0.6" step="0.02" value="0"></label>
+      <label class="ctl"><span data-i18n="simplify">Contour detail</span> <output id="simplify_mmO">0.02</output> <span data-i18n="unit.mm">mm</span>
+        <input type="range" id="simplify_mm" min="0" max="0.3" step="0.01" value="0.02"></label>
+      <label class="ctl">
+        <span class="lbl"><span data-i18n="nozzle">Nozzle</span>
+          <select id="nozzle_mm">
+            <option value="0.2" data-i18n="nozzle.02">0.2 mm</option>
+            <option value="0.25" data-i18n="nozzle.025">0.25 mm</option>
+            <option value="0.4" data-i18n="nozzle.04" selected>0.4 mm</option>
+            <option value="0.6" data-i18n="nozzle.06">0.6 mm</option>
+            <option value="0.8" data-i18n="nozzle.08">0.8 mm</option>
+          </select>
+        </span>
+      </label>
+      <p class="hint" id="nozzleHint"></p>
+      <label class="chk"><input type="checkbox" id="detail_thin">
+        <span data-i18n="detail.thin">Thin lines may not print</span></label>
+      <label class="chk"><input type="checkbox" id="mirror">
+        <span data-i18n="mirror">Mirror along X</span></label>
+    </section>
+
+    <section class="card" data-tab="model" data-for="patch">
+      <h2 data-i18n="patch.title">Patch</h2>
+      <label class="ctl"><span data-i18n="thickness">Thickness</span> <output id="thickness_mmO">0.40</output> <span data-i18n="unit.mm">mm</span>
+        <input type="range" id="thickness_mm" min="0.2" max="2" step="0.1" value="0.4"></label>
+      <label class="chk"><input type="checkbox" id="bridges" checked>
+        <span data-i18n="bridges">Join pieces with bridges</span></label>
+      <label class="ctl" data-need="bridges"><span data-i18n="bridge">Bridge width</span>
+        <output id="bridge_mmO">0.50</output> <span data-i18n="unit.mm">mm</span>
+        <input type="range" id="bridge_mm" min="0.4" max="2" step="0.1" value="0.5"></label>
+      <label class="chk" data-need="bridges"><input type="checkbox" id="show_bridges" checked>
+        <span data-i18n="show_bridges">Highlight bridges in the preview</span></label>
+      <label class="chk"><input type="checkbox" id="detail_press">
+        <span data-i18n="detail.press">Thickening when ironed</span></label>
+      <div id="spreadBox" hidden>
+        <label class="ctl"><span data-i18n="spread">Pressing force</span>
+          <output id="spread_mmO">0.80</output> <span data-i18n="spread.unit">mm of travel</span>
+          <input type="range" id="spread_mm" min="0" max="1.5" step="0.05" value="0.8"></label>
+        <p class="hint" id="spreadHint"></p>
+      </div>
+    </section>
+
+    <section class="card" data-tab="model" data-for="plaque" hidden>
+      <h2 data-i18n="plaque.title">Keychain / plaque</h2>
+      <label class="ctl"><span data-i18n="base">Base thickness</span> <output id="base_mmO">2.40</output> <span data-i18n="unit.mm">mm</span>
+        <input type="range" id="base_mm" min="0.6" max="6" step="0.2" value="2.4"></label>
+      <label class="ctl"><span data-i18n="relief">Relief height</span> <output id="relief_mmO">0.80</output> <span data-i18n="unit.mm">mm</span>
+        <input type="range" id="relief_mm" min="0.2" max="3" step="0.2" value="0.8"></label>
+      <label class="ctl"><span class="lbl"><span data-i18n="shape">Base shape</span></span>
+        <select id="base_shape"><option value="silhouette" data-i18n="shape.silhouette">follow the drawing</option>
+          <option value="rect" data-i18n="shape.rect">rounded rectangle</option></select></label>
+      <label class="ctl"><span data-i18n="margin">Margin around</span> <output id="base_margin_mmO">0.00</output> <span data-i18n="unit.mm">mm</span>
+        <input type="range" id="base_margin_mm" min="0" max="10" step="0.5" value="0"></label>
+      <label class="ctl" data-need="rect"><span data-i18n="corner">Corner radius</span> <output id="corner_r_mmO">6.00</output> <span data-i18n="unit.mm">mm</span>
+        <input type="range" id="corner_r_mm" min="0" max="25" step="1" value="6"></label>
+      <label class="ctl"><span data-i18n="islands">Drop islands smaller than</span>
+        <output id="min_island_mm2O">4.00</output> <span data-i18n="unit.mm2">mm²</span>
+        <input type="range" id="min_island_mm2" min="0" max="50" step="1" value="4"></label>
+    </section>
+
+    <section class="card" data-tab="model">
+      <h2 data-i18n="hole.title">Hanging hole</h2>
+      <label class="chk"><input type="checkbox" id="hole">
+        <span data-i18n="hole.add">Add a hole</span></label>
+      <div data-need="hole">
+        <label class="ctl"><span data-i18n="hole.d">Diameter</span> <output id="hole_d_mmO">4.00</output> <span data-i18n="unit.mm">mm</span>
+          <input type="range" id="hole_d_mm" min="1.5" max="12" step="0.5" value="4"></label>
+        <label class="ctl"><span data-i18n="hole.rim">Rim around the hole</span> <output id="hole_rim_mmO">2.00</output> <span data-i18n="unit.mm">mm</span>
+          <input type="range" id="hole_rim_mm" min="0.8" max="6" step="0.2" value="2"></label>
+        <label class="ctl"><span data-i18n="hole.x">Position X</span> <output id="hole_xO">0.08</output>
+          <input type="range" id="hole_x" min="0" max="1" step="0.01" value="0.08"></label>
+        <label class="ctl"><span data-i18n="hole.y">Position Y</span> <output id="hole_yO">0.92</output>
+          <input type="range" id="hole_y" min="0" max="1" step="0.01" value="0.92"></label>
+        <p class="hint" data-i18n="hole.hint">Move the hole outside the silhouette and a tab grows out and joins the drawing.</p>
+      </div>
+    </section>
+
+    <section class="card" data-tab="model">
+      <h2 data-i18n="dl.title">Download</h2>
+      <label class="ctl"><span class="lbl"><span data-i18n="format">Format</span></span>
+        <select id="format"><option value="3mf" data-i18n="fmt.3mf">3MF</option>
+          <option value="stl" data-i18n="fmt.stl">STL</option>
+          <option value="obj">OBJ</option>
+          <option value="ply">PLY</option></select></label>
+      <label class="ctl" data-for="plaque" hidden><span class="lbl"><span data-i18n="part.label">What</span></span>
+        <select id="part"><option value="all" data-i18n="part.all">base + drawing</option>
+          <option value="base_plate" data-i18n="part.base">base only</option>
+          <option value="line_art" data-i18n="part.art">drawing only</option></select></label>
+      <label class="chk" data-for="plaque" hidden><input type="checkbox" id="combine">
+        <span data-i18n="combine">Fuse into one color</span></label>
+      <button id="download" class="primary" data-i18n="dl.button" disabled>Download model</button>
+      <p class="hint" id="dlHint"></p>
+    </section>
+  </aside>
+
+  <!-- ------------------------------------------------ vector preview -->
+  <section id="stage-vector" class="stage" hidden>
+    <div class="seg viewseg" id="vview">
+      <button data-v="both" class="on" data-i18n="view.both">Overlay</button>
+      <button data-v="vector" data-i18n="view.vector">Vector</button>
+      <button data-v="raster" data-i18n="view.raster">Original</button>
+    </div>
+    <div id="vviewport">
+      <div id="vplaceholder">
+        <p id="vplaceholderText">Load a PNG or JPG to trace the contours</p>
+      </div>
+      <div id="vstack">
+        <img id="vraster" alt="" draggable="false">
+        <div id="vcanvas"></div>
+      </div>
+      <div id="vstats"></div>
+      <div id="vspinner" hidden><div class="dot"></div></div>
+    </div>
+    <div id="vwarnings"></div>
+  </section>
+
+  <!-- ------------------------------------------------ model preview -->
+  <section id="stage" class="stage">
+    <div id="viewport">
+      <div id="placeholder">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor"
+             stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4"
+             width="18" height="16" rx="2"/><path d="M3 15.5l5-4.5 3.5 3.5L14 12.5 21 16.5"/></svg>
+        <p data-i18n="ph.model">Load a drawing to see the model</p>
+      </div>
+      <div id="canvas"></div>
+      <div id="stats"></div>
+      <div id="spinner" hidden><div class="dot"></div></div>
+    </div>
+    <div id="warnings"></div>
+  </section>
+</main>
+
+<div id="loupe" hidden>
+  <canvas id="loupeCanvas" width="110" height="110"></canvas>
+  <span id="loupeHex"></span>
+</div>
+<script src="i18n.js?v=9"></script>
+<script src="app.js?v=11"></script>
+</body>
+</html>
