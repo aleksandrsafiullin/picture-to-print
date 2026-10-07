@@ -411,7 +411,7 @@ async def _security_headers(request, call_next):
 
 
 def _new_job(data: bytes, name: str) -> dict:
-    polys, kind = core.load_source(data, name)
+    polys, kind, th, inv = core.prepare_upload(data, name)
     if not polys:
         _fail(400, 'no_fills')
     job_id = uuid.uuid4().hex[:12]
@@ -422,11 +422,15 @@ def _new_job(data: bytes, name: str) -> dict:
         if len(_jobs) >= JOB_CAP:
             _fail(429, 'busy')
         _jobs[job_id] = {'polys': polys, 'data': data, 'kind': kind, 'name': name,
-                         'ts': now, 'key': (128, False)}
+                         'ts': now, 'key': (th, inv)}
     from shapely.ops import unary_union
     u = unary_union([g.buffer(0) for g in polys])
-    return {'job': job_id, 'kind': kind, 'name': name,
+    body = {'job': job_id, 'kind': kind, 'name': name,
             'islands': len(core._parts(u))}
+    if kind == 'bitmap':
+        body['threshold'] = th
+        body['invert'] = inv
+    return body
 
 
 def _preview_work(payload: dict) -> dict:

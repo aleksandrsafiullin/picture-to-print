@@ -1,10 +1,10 @@
 #!/bin/bash
-# Открывает Терминал с пусковым скриптом из папки проекта.
-# .app лежит внутри папки проекта — путь считается относительно него.
+# Opens Terminal on the project launcher.
+# The .app lives inside the project folder; the path is relative to that.
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-CMD="$HERE/Запустить.command"
+CMD="$HERE/Run.command"
 if [ ! -x "$CMD" ]; then
-  osascript -e 'display alert "lineart2print" message "Не найден «Запустить.command». Приложение должно лежать в папке проекта, рядом с ним."'
+  osascript -e 'display alert "lineart2print" message "Run.command was not found. Keep this app inside the project folder, next to Run.command."'
   exit 1
 fi
 exec open -a Terminal "$CMD"

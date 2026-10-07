@@ -1201,6 +1201,14 @@ function adoptJob(d) {
   $('#fileInfo').hidden = false;
   $('#fileName').textContent = d.name;
   fileMetaText();
+  if (d.kind === 'bitmap') {
+    const th = d.threshold == null ? 128 : d.threshold;
+    const inv = !!d.invert;
+    $('#threshold').value = th;
+    $('#v_threshold').value = th;
+    $('#invert').checked = inv;
+    $('#v_invert').checked = inv;
+  }
   $('#vraster').src = d.kind === 'bitmap' ? `/api/source/${d.job}` : '';
   $('#vcanvas').innerHTML = '';
   showVStats(null);

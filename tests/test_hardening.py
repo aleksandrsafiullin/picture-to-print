@@ -289,3 +289,39 @@ def test_bad_export_format(client):
     r = client.post('/api/export', json={'format': 'exe', 'job': 'x'})
     assert r.status_code == 400
     assert r.json()['error'] == 'bad_format'
+
+
+def _png(img):
+    import cv2
+    ok, buf = cv2.imencode('.png', img)
+    assert ok
+    return buf.tobytes()
+
+
+def test_black_lineart_keeps_threshold_128():
+    import cv2
+    import numpy as np
+    img = np.full((48, 48), 255, np.uint8)
+    cv2.line(img, (6, 6), (40, 40), 0, 3)
+    assert core.suggest_bitmap_cut(img) == (128, False)
+    polys, kind, th, inv = core.prepare_upload(_png(img), 'line.png')
+    assert kind == 'bitmap' and th == 128 and inv is False and polys
+
+
+def test_light_artwork_opens(client):
+    """Gold on white is lighter than 128, so a fixed cut used to reject the file."""
+    import numpy as np
+    img = np.full((80, 120, 3), 255, np.uint8)
+    img[20:60, 30:90] = (109, 166, 194)  # BGR, same ballpark as the ornaments
+    raw = _png(img)
+    assert core.polygons_from_bitmap(raw, 128, False) == []
+    body = _upload(client, 'gold.png', raw, 'image/png')
+    assert body['kind'] == 'bitmap'
+    assert body['invert'] is False
+    assert body['threshold'] >= 168
+    assert body['islands'] >= 1
+    svg, stats = vectorize.trace(raw, vectorize.params_from_dict({
+        'threshold': body['threshold'], 'invert': False,
+    }))
+    assert '<path' in svg
+    assert stats['ink_pct'] > 1

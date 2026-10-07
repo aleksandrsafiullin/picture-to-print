@@ -2,9 +2,10 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
 .DS_Store
 .claude/
-
-# CLI sample meshes from svg2solid.py / svg2transfer.py
-out/
-patch/

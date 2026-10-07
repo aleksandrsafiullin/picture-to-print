@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Запуск lineart2print. Первый раз создаст .venv и поставит зависимости.
+# Start lineart2print. The first run creates .venv and installs dependencies.
 set -e
 cd "$(dirname "$0")"
 if [ ! -d .venv ]; then

@@ -90,8 +90,8 @@ def _evenodd(rings):
     return out
 
 
-def polygons_from_bitmap(data: bytes, threshold: int = 128, invert: bool = False):
-    """Trace the dark pixels of a raster image into polygons with holes."""
+def _bitmap_gray(data: bytes):
+    """Decoded luminance. Transparent pixels are composited on white."""
     import cv2
     arr = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_UNCHANGED)
     if arr is None:
@@ -99,7 +99,41 @@ def polygons_from_bitmap(data: bytes, threshold: int = 128, invert: bool = False
     if arr.ndim == 3 and arr.shape[2] == 4:               # composite alpha on white
         a = arr[:, :, 3:4].astype(np.float32) / 255.0
         arr = (arr[:, :, :3].astype(np.float32) * a + 255 * (1 - a)).astype(np.uint8)
-    gray = arr if arr.ndim == 2 else cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
+    if arr.ndim == 2:
+        return arr
+    return cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
+
+
+def suggest_bitmap_cut(gray) -> tuple[int, bool]:
+    """(threshold, invert) for the first trace.
+
+    128 means "darker than mid-gray is ink". Gold, ochre and red on white
+    sit entirely above that, so the upload used to come back empty. When
+    the default cut has no ink, Otsu splits the two tones and the darker
+    one stays the ink. A real black drawing already has ink at 128 and
+    is left alone.
+    """
+    # OpenCV THRESH_BINARY_INV keeps src <= threshold. Match that, or a
+    # cut that lands on the ink tone (flat gold) counts as empty.
+    if float((gray <= 128).mean()) >= 1e-4:
+        return 128, False
+    import cv2
+    t, _ = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    # Slider range in the UI is 10..245; stay inside it so the first
+    # trace and the knob agree.
+    t = int(max(10, min(245, int(t))))
+    dark = float((gray <= t).mean())
+    if 1e-4 <= dark <= 0.98:
+        return t, False
+    light = float((gray > t).mean())
+    if 1e-4 <= light <= 0.98:
+        return t, True
+    return 128, False
+
+
+def _polygons_from_gray(gray, threshold: int = 128, invert: bool = False):
+    """Trace one luminance image. invert traces the light pixels."""
+    import cv2
     mode = cv2.THRESH_BINARY if invert else cv2.THRESH_BINARY_INV
     _, mask = cv2.threshold(gray, int(threshold), 255, mode)
     cnts, hier = cv2.findContours(mask, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
@@ -126,14 +160,35 @@ def polygons_from_bitmap(data: bytes, threshold: int = 128, invert: bool = False
     return polys
 
 
+def polygons_from_bitmap(data: bytes, threshold: int = 128, invert: bool = False):
+    """Trace the dark pixels of a raster image into polygons with holes."""
+    return _polygons_from_gray(_bitmap_gray(data), threshold, invert)
+
+
+def _is_svg(data: bytes, filename: str) -> bool:
+    head = data[:400].lstrip()
+    return filename.lower().endswith('.svg') or head.startswith(b'<?xml') \
+        or head.startswith(b'<svg')
+
+
 def load_source(data: bytes, filename: str, threshold: int = 128, invert: bool = False):
     """Returns (polygons in source units, kind)."""
-    head = data[:400].lstrip()
-    is_svg = filename.lower().endswith('.svg') or head.startswith(b'<?xml') \
-        or head.startswith(b'<svg')
-    if is_svg:
+    if _is_svg(data, filename):
         return _evenodd(rings_from_svg(data)), 'svg'
     return polygons_from_bitmap(data, threshold, invert), 'bitmap'
+
+
+def prepare_upload(data: bytes, filename: str):
+    """(polygons, kind, threshold, invert) for a freshly opened file.
+
+    Raster files whose ink is lighter than 128 get an Otsu cut so the
+    upload is not rejected as empty. SVG is unchanged.
+    """
+    if _is_svg(data, filename):
+        return _evenodd(rings_from_svg(data)), 'svg', 128, False
+    gray = _bitmap_gray(data)
+    th, inv = suggest_bitmap_cut(gray)
+    return _polygons_from_gray(gray, th, inv), 'bitmap', th, inv
 
 
 # --------------------------------------------------------------------------- #

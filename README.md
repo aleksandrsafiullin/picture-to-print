@@ -65,21 +65,31 @@ Or fuse them and print one color, with the drawing as relief.
 
 ## Run it
 
-**macOS, from Finder.** Double-click `Запустить.command`, or
+**macOS, from Finder.** Double-click `Run.command`, or
 `lineart2print.app` (that one can live in the Dock). The first launch
 creates `.venv` and installs dependencies. The browser opens at
 [http://127.0.0.1:8765](http://127.0.0.1:8765). Close the terminal
 window and the server goes with it. A second click, while it is
 already up, only opens the tab.
 
-The `.app` has to sit next to `Запустить.command`. Move the app alone
+The `.app` has to sit next to `Run.command`. Move the app alone
 and it will say so.
 
-**Terminal.**
+**Terminal** (macOS or Linux).
 
 ```bash
 ./run.sh
 ```
+
+**Windows.**
+
+```bat
+python -m venv .venv
+.venv\Scripts\pip install -r app\requirements.txt
+.venv\Scripts\python -m uvicorn server:app --app-dir app --host 127.0.0.1 --port 8765
+```
+
+Then open [http://127.0.0.1:8765](http://127.0.0.1:8765).
 
 **Docker.**
 
@@ -148,33 +158,26 @@ workers, with at most 30 jobs waiting. That limit is real only with
 one uvicorn process.
 
 ```bash
+pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-`pytest` is not in `app/requirements.txt`. Install it into the venv
-first. The suite checks clamps, the queue, job expiry, and SVG headers.
+`pytest` stays out of `app/requirements.txt`. The suite checks clamps,
+the queue, job expiry, and SVG headers.
 
 ## Layout
 
 ```
-Запустить.command     double-click launch, creates .venv the first time
-lineart2print.app     Dock wrapper, looks for the script beside it
+Run.command           double-click launch, creates .venv the first time
+lineart2print.app     Dock wrapper, looks for Run.command beside it
 run.sh                terminal launch
 Dockerfile            python:3.12-slim, port 8765
 app/core.py           contours, holes, bridges, extrude, STL/3MF/OBJ/PLY
 app/vectorize.py      raster to SVG through potrace
 app/server.py         FastAPI
 app/static/           the page, no build step
-svg2solid.py          the original plaque script
-svg2transfer.py       the original patch script
-```
-
-`svg2solid.py` and `svg2transfer.py` are the command-line versions this
-app replaced. They still build the sample meshes into `out/` and `patch/`.
-
-```bash
-python svg2solid.py drawing.svg out --width 150 --base 2.4 --relief 0.8
-python svg2transfer.py drawing.svg patch --width 150 --thickness 0.4
+app/requirements.txt  runtime dependencies
+requirements-dev.txt  runtime plus pytest
 ```
 
 <details>
@@ -192,7 +195,7 @@ python svg2transfer.py drawing.svg patch --width 150 --thickness 0.4
 объекта для печати в два цвета. Можно скачать только подложку, только
 рисунок или склеить в одну деталь.
 
-Запуск на macOS — двойной клик по `Запустить.command` или
+Запуск на macOS — двойной клик по `Run.command` или
 `lineart2print.app`. Из терминала — `./run.sh`. Браузер откроется на
 <http://127.0.0.1:8765>.
 
@@ -204,3 +207,7 @@ python svg2transfer.py drawing.svg patch --width 150 --thickness 0.4
 простоя.
 
 </details>
+
+## License
+
+[MIT](LICENSE).
